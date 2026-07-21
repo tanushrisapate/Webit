@@ -7,6 +7,7 @@
 # Large datasets
 data/books/*.csv
 data/movies/*.csv
+data/processed/
 
 # Python
 __pycache__/
@@ -15,3 +16,4 @@ __pycache__/
 # Virtual environments
 venv/
 env/
+.idea/
