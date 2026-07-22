@@ -1,7 +1,5 @@
-from app import app, load_models
+import uvicorn
 
 if __name__ == '__main__':
-    # Initialize recommendations models
-    load_models()
-    # Run the Flask application
-    app.run(debug=True, port=5050)
+    # Run the new FastAPI application
+    uvicorn.run("backend.main:app", host="127.0.0.1", port=8000, reload=True)

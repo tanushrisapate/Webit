@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+pandas
+numpy
+nltk
+scikit-learn
+pyjwt
+passlib[bcrypt]
+python-multipart
+flask-cors

@@ -1,0 +1,91 @@
+@import "tailwindcss";
+
+body {
+  background-color: rgb(9 9 11); /* zinc-950 */
+  color: rgb(244 244 245); /* zinc-100 */
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Spin animation for loaders */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Recommendation card hover glow effect */
+.recommendation-card {
+  will-change: transform, box-shadow;
+}
+
+/* Smooth fade-in for recommendation cards */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.recommendation-card {
+  animation: fadeInUp 0.4s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.recommendation-card:nth-child(1) { animation-delay: 0.05s; }
+.recommendation-card:nth-child(2) { animation-delay: 0.1s; }
+.recommendation-card:nth-child(3) { animation-delay: 0.15s; }
+.recommendation-card:nth-child(4) { animation-delay: 0.2s; }
+.recommendation-card:nth-child(5) { animation-delay: 0.25s; }
+
+/* Minimalist Scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Selection highlight */
+::selection {
+  background: rgba(113, 113, 122, 0.3);
+  color: #ffffff;
+}
+
+/* Reset default focus outline on click but keep for keyboard */
+button:focus, a:focus, input:focus, select:focus, textarea:focus {
+  outline: none;
+}
+
+button:focus:not(:focus-visible),
+a:focus:not(:focus-visible),
+div:focus:not(:focus-visible),
+span:focus:not(:focus-visible) {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+:focus-visible {
+  outline: 2px solid rgba(161, 161, 170, 0.4) !important;
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+/* Remove tap highlight color on mobile */
+* {
+  -webkit-tap-highlight-color: transparent;
+}

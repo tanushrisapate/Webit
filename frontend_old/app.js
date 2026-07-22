@@ -18,8 +18,9 @@ const recommendationsGrid = document.getElementById('recommendations-grid');
 const movieTab = document.getElementById('movie-tab');
 const bookTab = document.getElementById('book-tab');
 
-// API Base URL (Relative for deployment/production, fallback to localhost for development)
-const API_BASE_URL = window.location.origin.startsWith('file') ? 'http://127.0.0.1:5050' : window.location.origin;
+const API_BASE_URL = (window.location.origin && window.location.origin.startsWith('http')) 
+    ? window.location.origin 
+    : 'http://127.0.0.1:5050';
 
 // Initialize App
 document.addEventListener('DOMContentLoaded', () => {
@@ -51,7 +52,7 @@ function setUpEventListeners() {
     clearBtn.addEventListener('click', clearSearch);
     
     // Recommend trigger
-    recommendBtn.addEventListener('click', getRecommendations);
+    recommendBtn.addEventListener('click', () => getRecommendations());
     searchInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
             getRecommendations();
@@ -186,7 +187,11 @@ function hideElement(element) {
 }
 
 // Generate recommendations cards based on API response
-async function getRecommendations() {
+async function getRecommendations(itemId = null) {
+    // If called via event listener or other contexts, ignore the Event object parameter
+    if (itemId && typeof itemId === 'object') {
+        itemId = null;
+    }
     const queryVal = searchInput.value.trim();
     if (!queryVal) return;
     
@@ -196,7 +201,15 @@ async function getRecommendations() {
     hideElement(resultsSection);
     
     const endpoint = currentMode === 'movies' ? '/api/recommend/movie' : '/api/recommend/book';
-    const payload = currentMode === 'movies' ? { movie: queryVal } : { book: queryVal };
+    
+    let payload = {};
+    if (currentMode === 'movies') {
+        payload = { movie: queryVal };
+        if (itemId !== null) payload.id = itemId;
+    } else {
+        payload = { book: queryVal };
+        if (itemId !== null) payload.id = itemId;
+    }
     
     try {
         const response = await fetch(`${API_BASE_URL}${endpoint}`, {
@@ -207,7 +220,15 @@ async function getRecommendations() {
             body: JSON.stringify(payload)
         });
         
-        const data = await response.json();
+        let data = {};
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+            data = await response.json();
+        } else {
+            const text = await response.text();
+            data = { error: text || `HTTP Error ${response.status}` };
+        }
+        
         hideElement(loader);
         
         if (!response.ok) {
@@ -264,6 +285,11 @@ async function displayResults(data) {
         if (currentMode === 'movies') {
             ratingText = `${rec.rating.toFixed(1)}/10`;
             iconHtml = '<i class="fa-solid fa-film"></i> Movie';
+            metaHtml = `
+                <div class="watch-providers" id="watch-${rec.id}">
+                    <span style="font-size: 0.75rem; opacity: 0.5;">Checking streaming...</span>
+                </div>
+            `;
         } else {
             ratingText = `${rec.rating.toFixed(1)}/5`;
             iconHtml = '<i class="fa-solid fa-book"></i> Book';
@@ -272,18 +298,23 @@ async function displayResults(data) {
                     By <strong>${rec.authors}</strong><br>
                     <span style="font-size: 0.8rem; opacity: 0.7;">Publisher: ${rec.publisher || 'Unknown'}</span>
                 </div>
+                <div class="watch-providers" style="margin-top: 8px;">
+                    <a href="https://www.goodreads.com/search?q=${encodeURIComponent(rec.title)}" target="_blank" class="watch-link">
+                        <i class="fa-solid fa-book-open"></i> Find on Goodreads
+                    </a>
+                </div>
             `;
         }
         
         card.innerHTML = `
             <div class="card-image-container shimmer">
+                <span class="similarity-pct">${similarityPct}% match</span>
                 <img class="card-poster" src="" alt="${rec.title}" style="display: none;">
             </div>
             <div class="card-content">
                 <div class="card-top">
                     <div class="card-header-info">
                         <h3 class="card-title">${rec.title}</h3>
-                        <span class="similarity-pct">${similarityPct}% match</span>
                     </div>
                     ${metaHtml}
                 </div>
@@ -319,6 +350,31 @@ async function displayResults(data) {
                 };
             }
         });
+
+        // Load streaming providers asynchronously if it's a movie
+        if (currentMode === 'movies') {
+            getStreamingProviders(rec.title).then(providers => {
+                const watchContainer = card.querySelector(`#watch-${rec.id}`);
+                if (watchContainer) {
+                    watchContainer.innerHTML = '';
+                    if (providers && providers.length > 0) {
+                        providers.forEach(p => {
+                            const a = document.createElement('a');
+                            a.href = p.url;
+                            a.target = '_blank';
+                            a.className = `watch-link ${p.isFlatrate ? 'flatrate' : ''}`;
+                            a.innerHTML = `<i class="fa-solid fa-circle-play"></i> Watch on ${p.name}`;
+                            watchContainer.appendChild(a);
+                        });
+                    } else {
+                        // Show not available message
+                        watchContainer.innerHTML = `
+                            <span style="font-size: 0.75rem; opacity: 0.4;">Not available on local streaming platforms</span>
+                        `;
+                    }
+                }
+            });
+        }
     });
     
     showElement(resultsSection);
@@ -404,7 +460,7 @@ async function displayAmbiguousMatches(data) {
         const selectBtn = card.querySelector('.select-match-btn');
         selectBtn.addEventListener('click', () => {
             searchInput.value = match.title;
-            getRecommendations();
+            getRecommendations(match.id);
         });
     });
     
@@ -443,4 +499,49 @@ async function getPosterOrCoverUrl(title, type, isbn) {
     } else {
         return 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?auto=format&fit=crop&w=300&q=80';
     }
+}
+
+// Fetch streaming providers for a movie title via FM-DB API
+async function getStreamingProviders(title) {
+    try {
+        const response = await fetch(`https://imdb.iamidiotareyoutoo.com/justwatch?q=${encodeURIComponent(title)}`);
+        if (response.ok) {
+            const data = await response.json();
+            if (data.description && data.description.length > 0) {
+                // Find matching movie using exact or loose title matching (never fall back to unrelated first index)
+                const movieMatch = data.description.find(m => m.title.toLowerCase() === title.toLowerCase()) || 
+                                   data.description.find(m => m.title.toLowerCase().includes(title.toLowerCase()) || title.toLowerCase().includes(m.title.toLowerCase()));
+                
+                if (movieMatch && movieMatch.offers && movieMatch.offers.length > 0) {
+                    const providers = [];
+                    const seenNames = new Set();
+                    
+                    // Filter offers into flatrate (streaming subscription), rent, and buy
+                    const flatrateOffers = movieMatch.offers.filter(o => o.type.startsWith('FLATRATE'));
+                    const otherOffers = movieMatch.offers.filter(o => !o.type.startsWith('FLATRATE'));
+                    const sortedOffers = [...flatrateOffers, ...otherOffers];
+                    
+                    for (const offer of sortedOffers) {
+                        const providerName = offer.name;
+                        // Strict check to ensure we only link to direct OTT destinations and never JustWatch redirects
+                        if (offer.url && !offer.url.includes('justwatch.com')) {
+                            if (!seenNames.has(providerName)) {
+                                seenNames.add(providerName);
+                                providers.push({
+                                    name: providerName,
+                                    url: offer.url,
+                                    isFlatrate: offer.type.startsWith('FLATRATE')
+                                });
+                            }
+                        }
+                        if (providers.length >= 2) break; // Limit to top 2 providers to fit the card layout cleanly
+                    }
+                    return providers;
+                }
+            }
+        }
+    } catch (e) {
+        console.error("Failed to fetch JustWatch streaming data:", e);
+    }
+    return null;
 }

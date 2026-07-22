@@ -62,40 +62,44 @@ def recommend_movie():
         return jsonify({"error": "Movie models not loaded."}), 503
     
     data = request.get_json()
-    if not data or 'movie' not in data:
-        return jsonify({"error": "Missing 'movie' field in request body."}), 400
+    if not data or ('movie' not in data and 'id' not in data):
+        return jsonify({"error": "Missing 'movie' or 'id' field in request body."}), 400
     
-    movie_title = data['movie'].strip()
+    movie_id = data.get('id')
+    movie_title = data.get('movie', '').strip()
     
-    # Try case-insensitive exact match first
-    matching_movies = movies_df[movies_df['title'].str.lower() == movie_title.lower()]
-    
-    if matching_movies.empty:
-        # Try substring match
-        matching_movies = movies_df[movies_df['title'].str.contains(movie_title, case=False, na=False)]
+    if movie_id is not None:
+        matching_movies = movies_df[movies_df['id'] == int(movie_id)]
+    else:
+        # Try case-insensitive exact match first
+        matching_movies = movies_df[movies_df['title'].str.lower() == movie_title.lower()]
         
-    if matching_movies.empty:
-        return jsonify({"error": f"Movie '{movie_title}' not found in database."}), 404
-    
-    # Check for ambiguity (multiple matches)
-    if len(matching_movies) > 1:
-        # Check if there is exactly one exact match in the subset, use that
-        exact_subset = matching_movies[matching_movies['title'].str.lower() == movie_title.lower()]
-        if len(exact_subset) == 1:
-            matching_movies = exact_subset
-        else:
-            matches = []
-            for idx, row in matching_movies.iterrows():
-                matches.append({
-                    "title": str(row['title']),
-                    "rating": float(row['vote_average']) if 'vote_average' in row and not pd.isna(row['vote_average']) else 0.0,
-                    "id": int(row['id'])
+        if matching_movies.empty:
+            # Try substring match
+            matching_movies = movies_df[movies_df['title'].str.contains(movie_title, case=False, na=False)]
+            
+        if matching_movies.empty:
+            return jsonify({"error": f"Movie '{movie_title}' not found in database."}), 404
+        
+        # Check for ambiguity (multiple matches)
+        if len(matching_movies) > 1:
+            # Check if there is exactly one exact match in the subset, use that
+            exact_subset = matching_movies[matching_movies['title'].str.lower() == movie_title.lower()]
+            if len(exact_subset) == 1:
+                matching_movies = exact_subset
+            else:
+                matches = []
+                for idx, row in matching_movies.iterrows():
+                    matches.append({
+                        "title": str(row['title']),
+                        "rating": float(row['vote_average']) if 'vote_average' in row and not pd.isna(row['vote_average']) else 0.0,
+                        "id": int(row['id'])
+                    })
+                return jsonify({
+                    "ambiguous": True,
+                    "query": movie_title,
+                    "matches": matches
                 })
-            return jsonify({
-                "ambiguous": True,
-                "query": movie_title,
-                "matches": matches
-            })
             
     # Get the unique match
     movie_idx = matching_movies.index[0]
@@ -110,11 +114,16 @@ def recommend_movie():
         if i[0] == movie_idx:
             continue
         row = movies_df.iloc[i[0]]
+        similarity = float(i[1])
+        # Force 100% similarity for the exact same name
+        if row['title'].lower() == movie_name.lower():
+            similarity = 1.0
+            
         recommendations.append({
             "id": int(row['id']),
             "title": str(row['title']),
             "rating": float(row['vote_average']) if 'vote_average' in row and not pd.isna(row['vote_average']) else 0.0,
-            "similarity": float(i[1])
+            "similarity": similarity
         })
         if len(recommendations) == 5:
             break
@@ -130,42 +139,47 @@ def recommend_book():
         return jsonify({"error": "Book models not loaded."}), 503
     
     data = request.get_json()
-    if not data or 'book' not in data:
-        return jsonify({"error": "Missing 'book' field in request body."}), 400
+    if not data or ('book' not in data and 'id' not in data):
+        return jsonify({"error": "Missing 'book' or 'id' field in request body."}), 400
     
-    book_title = data['book'].strip()
+    book_id = data.get('id')
+    book_title = data.get('book', '').strip()
     
-    # Try case-insensitive exact match first
-    matching_books = books_df[books_df['Name'].str.lower() == book_title.lower()]
-    
-    if matching_books.empty:
-        # Try substring match
-        matching_books = books_df[books_df['Name'].str.contains(book_title, case=False, na=False)]
+    if book_id is not None:
+        matching_books = books_df[books_df['Id'] == int(book_id)]
+    else:
+        # Try case-insensitive exact match first
+        matching_books = books_df[books_df['Name'].str.lower() == book_title.lower()]
         
-    if matching_books.empty:
-        return jsonify({"error": f"Book '{book_title}' not found in database."}), 404
-    
-    # Check for ambiguity (multiple matches)
-    if len(matching_books) > 1:
-        # Check if there is exactly one exact match in the subset, use that
-        exact_subset = matching_books[matching_books['Name'].str.lower() == book_title.lower()]
-        if len(exact_subset) == 1:
-            matching_books = exact_subset
-        else:
-            matches = []
-            for idx, row in matching_books.iterrows():
-                matches.append({
-                    "title": str(row['Name']),
-                    "authors": str(row['Authors']),
-                    "publisher": str(row['Publisher']),
-                    "rating": float(row['Rating']) if 'Rating' in row and not pd.isna(row['Rating']) else 0.0,
-                    "isbn": str(row['ISBN']).strip() if 'ISBN' in row and not pd.isna(row['ISBN']) else ""
+        if matching_books.empty:
+            # Try substring match
+            matching_books = books_df[books_df['Name'].str.contains(book_title, case=False, na=False)]
+            
+        if matching_books.empty:
+            return jsonify({"error": f"Book '{book_title}' not found in database."}), 404
+        
+        # Check for ambiguity (multiple matches)
+        if len(matching_books) > 1:
+            # Check if there is exactly one exact match in the subset, use that
+            exact_subset = matching_books[matching_books['Name'].str.lower() == book_title.lower()]
+            if len(exact_subset) == 1:
+                matching_books = exact_subset
+            else:
+                matches = []
+                for idx, row in matching_books.iterrows():
+                    matches.append({
+                        "id": int(row['Id']),
+                        "title": str(row['Name']),
+                        "authors": str(row['Authors']),
+                        "publisher": str(row['Publisher']),
+                        "rating": float(row['Rating']) if 'Rating' in row and not pd.isna(row['Rating']) else 0.0,
+                        "isbn": str(row['ISBN']).strip() if 'ISBN' in row and not pd.isna(row['ISBN']) else ""
+                    })
+                return jsonify({
+                    "ambiguous": True,
+                    "query": book_title,
+                    "matches": matches
                 })
-            return jsonify({
-                "ambiguous": True,
-                "query": book_title,
-                "matches": matches
-            })
             
     # Get the unique match
     book_idx = matching_books.index[0]
@@ -192,6 +206,11 @@ def recommend_book():
                 continue
             author_counts[author_raw] = author_counts.get(author_raw, 0) + 1
             
+        similarity = float(i[1])
+        # Force 100% similarity for the exact same name
+        if row['Name'].lower() == book_name.lower():
+            similarity = 1.0
+            
         recommendations.append({
             "id": int(row['Id']),
             "title": str(row['Name']),
@@ -199,7 +218,7 @@ def recommend_book():
             "publisher": str(row['Publisher']),
             "rating": float(row['Rating']) if 'Rating' in row and not pd.isna(row['Rating']) else 0.0,
             "isbn": str(row['ISBN']).strip() if 'ISBN' in row and not pd.isna(row['ISBN']) else "",
-            "similarity": float(i[1])
+            "similarity": similarity
         })
         if len(recommendations) == 5:
             break

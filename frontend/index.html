@@ -1,91 +1,17 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Webit | Movie & Book Recommendations</title>
-    <!-- Google Fonts -->
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Webit - Movie & Book Recommendation System</title>
+    <!-- Google Fonts Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Font Awesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Custom Style -->
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
-    <div class="app-container">
-        <!-- Header -->
-        <header>
-            <div class="logo">
-                <i class="fa-solid fa-compass brand-icon"></i>
-                <span class="brand-name">Webit</span>
-            </div>
-            <p class="subtitle">Search and discover matching movies and books</p>
-        </header>
-
-        <!-- Main Content -->
-        <main>
-            <div class="search-card-wrapper border-card">
-                <!-- Mode Selector Tabs -->
-                <div class="tabs-container">
-                    <button class="tab-btn active" id="movie-tab" data-mode="movies">
-                        <i class="fa-solid fa-film"></i> Movies
-                    </button>
-                    <button class="tab-btn" id="book-tab" data-mode="books">
-                        <i class="fa-solid fa-book"></i> Books
-                    </button>
-                </div>
-
-                <!-- Input Group -->
-                <div class="search-input-group">
-                    <div class="input-wrapper">
-                        <i class="fa-solid fa-magnifying-glass search-icon"></i>
-                        <input type="text" id="search-input" placeholder="Type a movie you love (e.g. The Dark Knight)..." autocomplete="off">
-                        <button id="clear-btn" class="clear-btn hidden"><i class="fa-solid fa-xmark"></i></button>
-                        <!-- Autocomplete Suggestions Dropdown -->
-                        <div id="autocomplete-list" class="autocomplete-items hidden"></div>
-                    </div>
-                    <button id="recommend-btn" class="btn btn-primary">
-                        <span>Get Recommendations</span>
-                        <i class="fa-solid fa-arrow-right"></i>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Loading Spinner -->
-            <div id="loader" class="loader-container hidden">
-                <div class="spinner"></div>
-                <p>Retrieving recommendations...</p>
-            </div>
-
-            <!-- Error Banner -->
-            <div id="error-message" class="error-banner hidden">
-                <i class="fa-solid fa-circle-exclamation error-icon"></i>
-                <span id="error-text">No recommendations found. Please try another search term.</span>
-            </div>
-
-            <!-- Results Section -->
-            <section id="results-section" class="results-section hidden">
-                <div class="results-header">
-                    <h2>Because you liked <span id="query-name" class="highlight">Movie Title</span></h2>
-                    <p class="recommendation-badge">Recommendations</p>
-                </div>
-
-                <!-- Recommendations Grid -->
-                <div id="recommendations-grid" class="cards-grid">
-                    <!-- Cards will be dynamically inserted here -->
-                </div>
-            </section>
-        </main>
-
-        <!-- Footer -->
-        <footer>
-            <p>2026 Webit Recommender App. Built with Flask, scikit-learn & Cosine Similarity.</p>
-        </footer>
-    </div>
-
-    <!-- Javascript -->
-    <script src="app.js"></script>
-</body>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;650;700;800&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
 </html>
