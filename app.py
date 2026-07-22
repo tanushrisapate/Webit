@@ -93,6 +93,7 @@ def recommend_movie():
                 })
             return jsonify({
                 "ambiguous": True,
+                "query": movie_title,
                 "matches": matches
             })
             
@@ -162,6 +163,7 @@ def recommend_book():
                 })
             return jsonify({
                 "ambiguous": True,
+                "query": book_title,
                 "matches": matches
             })
             

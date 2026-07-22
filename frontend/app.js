@@ -422,7 +422,7 @@ async function getPosterOrCoverUrl(title, type, isbn) {
     // Fallback: Wikipedia Page Images API
     try {
         const queryTitle = type === 'movies' ? `${title} (film)` : title;
-        const response = await fetch(`https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&prop=pageimages&generator=search&gsrsearch=${encodeURIComponent(queryTitle)}&gsrlimit=1&piprop=thumbnail&pithumbsize=300`);
+        const response = await fetch(`https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&prop=pageimages&pilicense=any&generator=search&gsrsearch=${encodeURIComponent(queryTitle)}&gsrlimit=1&piprop=thumbnail&pithumbsize=300`);
         if (response.ok) {
             const data = await response.json();
             if (data.query && data.query.pages) {
