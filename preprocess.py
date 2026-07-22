@@ -259,7 +259,7 @@ def preprocess_books():
 
     # Save files
     os.makedirs('data/processed', exist_ok=True)
-    books_export = books[['Id', 'Name', 'Authors', 'Publisher', 'Rating']].copy()
+    books_export = books[['Id', 'Name', 'Authors', 'Publisher', 'Rating', 'ISBN']].copy()
     
     with open('data/processed/book_list.pkl', 'wb') as f:
         pickle.dump(books_export, f)

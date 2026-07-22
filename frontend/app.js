@@ -236,7 +236,7 @@ function showError(message) {
 }
 
 // Render recommendations
-function displayResults(data) {
+async function displayResults(data) {
     recommendationsGrid.innerHTML = '';
     
     // Reset ambiguous header changes if any
@@ -249,9 +249,9 @@ function displayResults(data) {
     badge.style.borderColor = 'rgba(16, 185, 129, 0.2)';
     badge.style.color = 'var(--secondary-color)';
     
-    data.recommendations.forEach(rec => {
+    const cardPromises = data.recommendations.map(async (rec) => {
         const card = document.createElement('div');
-        card.className = 'rec-card glass';
+        card.className = 'rec-card glass image-card';
         
         // Convert similarity fraction to percentage
         const similarityPct = Math.round(rec.similarity * 100);
@@ -259,63 +259,76 @@ function displayResults(data) {
         // Star ratings scaling details
         let ratingText = '';
         let iconHtml = '';
+        let metaHtml = '';
         
         if (currentMode === 'movies') {
             ratingText = `${rec.rating.toFixed(1)}/10`;
             iconHtml = '<i class="fa-solid fa-film"></i> Movie';
-            
-            card.innerHTML = `
-                <div class="card-top">
-                    <div class="card-header-info">
-                        <h3 class="card-title">${rec.title}</h3>
-                        <span class="similarity-pct">${similarityPct}% match</span>
-                    </div>
-                </div>
-                <div class="card-footer">
-                    <div class="rating-badge">
-                        <i class="fa-solid fa-star"></i>
-                        <span>${ratingText}</span>
-                    </div>
-                    <span class="media-tag">${iconHtml}</span>
-                </div>
-            `;
         } else {
-            // Books
             ratingText = `${rec.rating.toFixed(1)}/5`;
             iconHtml = '<i class="fa-solid fa-book"></i> Book';
-            
-            card.innerHTML = `
-                <div class="card-top">
-                    <div class="card-header-info">
-                        <h3 class="card-title">${rec.title}</h3>
-                        <span class="similarity-pct">${similarityPct}% match</span>
-                    </div>
-                    <div class="metadata-label">
-                        By <strong>${rec.authors}</strong><br>
-                        <span style="font-size: 0.8rem; opacity: 0.7;">Publisher: ${rec.publisher || 'Unknown'}</span>
-                    </div>
-                </div>
-                <div class="card-footer">
-                    <div class="rating-badge">
-                        <i class="fa-solid fa-star"></i>
-                        <span>${ratingText}</span>
-                    </div>
-                    <span class="media-tag">${iconHtml}</span>
+            metaHtml = `
+                <div class="metadata-label">
+                    By <strong>${rec.authors}</strong><br>
+                    <span style="font-size: 0.8rem; opacity: 0.7;">Publisher: ${rec.publisher || 'Unknown'}</span>
                 </div>
             `;
         }
         
+        card.innerHTML = `
+            <div class="card-image-container shimmer">
+                <img class="card-poster" src="" alt="${rec.title}" style="display: none;">
+            </div>
+            <div class="card-content">
+                <div class="card-top">
+                    <div class="card-header-info">
+                        <h3 class="card-title">${rec.title}</h3>
+                        <span class="similarity-pct">${similarityPct}% match</span>
+                    </div>
+                    ${metaHtml}
+                </div>
+                <div class="card-footer">
+                    <div class="rating-badge">
+                        <i class="fa-solid fa-star"></i>
+                        <span>${ratingText}</span>
+                    </div>
+                    <span class="media-tag">${iconHtml}</span>
+                </div>
+            </div>
+        `;
+        
         recommendationsGrid.appendChild(card);
+        
+        // Load cover/poster asynchronously
+        getPosterOrCoverUrl(rec.title, currentMode, rec.isbn).then(imageUrl => {
+            const img = card.querySelector('.card-poster');
+            const imgContainer = card.querySelector('.card-image-container');
+            if (img) {
+                img.src = imageUrl;
+                img.onload = () => {
+                    imgContainer.classList.remove('shimmer');
+                    img.style.display = 'block';
+                };
+                img.onerror = () => {
+                    const fallbackUrl = currentMode === 'movies'
+                        ? 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=300&q=80'
+                        : 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?auto=format&fit=crop&w=300&q=80';
+                    img.src = fallbackUrl;
+                    imgContainer.classList.remove('shimmer');
+                    img.style.display = 'block';
+                };
+            }
+        });
     });
     
     showElement(resultsSection);
-    
-    // Smooth scroll to results
     resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    
+    await Promise.all(cardPromises);
 }
 
 // Render ambiguous results picker
-function displayAmbiguousMatches(data) {
+async function displayAmbiguousMatches(data) {
     recommendationsGrid.innerHTML = '';
     
     // Customize header for ambiguity choice
@@ -330,7 +343,7 @@ function displayAmbiguousMatches(data) {
     
     data.matches.forEach(match => {
         const card = document.createElement('div');
-        card.className = 'rec-card glass';
+        card.className = 'rec-card glass image-card';
         
         let metaHtml = '';
         let typeIcon = '';
@@ -343,21 +356,49 @@ function displayAmbiguousMatches(data) {
         }
         
         card.innerHTML = `
-            <div class="card-top">
-                <div class="card-header-info" style="margin-bottom: 12px;">
-                    <h3 class="card-title" style="font-size: 1.15rem;">${match.title}</h3>
-                </div>
-                <div class="metadata-label">
-                    ${metaHtml}
-                </div>
+            <div class="card-image-container shimmer">
+                <img class="card-poster" src="" alt="${match.title}" style="display: none;">
             </div>
-            <div class="card-footer" style="justify-content: space-between; border-top: 1px solid rgba(255,255,255,0.04); padding-top: 12px; margin-top: 15px;">
-                <span class="media-tag">${typeIcon}</span>
-                <button class="btn btn-primary select-match-btn" data-title="${match.title}" style="padding: 8px 16px; font-size: 0.85rem; border-radius: 8px;">
-                    Select
-                </button>
+            <div class="card-content">
+                <div class="card-top">
+                    <div class="card-header-info" style="margin-bottom: 12px;">
+                        <h3 class="card-title" style="font-size: 1.15rem;">${match.title}</h3>
+                    </div>
+                    <div class="metadata-label">
+                        ${metaHtml}
+                    </div>
+                </div>
+                <div class="card-footer" style="justify-content: space-between; border-top: 1px solid rgba(255,255,255,0.04); padding-top: 12px; margin-top: 15px;">
+                    <span class="media-tag">${typeIcon}</span>
+                    <button class="btn btn-primary select-match-btn" data-title="${match.title}" style="padding: 8px 16px; font-size: 0.85rem; border-radius: 8px;">
+                        Select
+                    </button>
+                </div>
             </div>
         `;
+        
+        recommendationsGrid.appendChild(card);
+        
+        // Load cover/poster asynchronously
+        getPosterOrCoverUrl(match.title, currentMode, match.isbn).then(imageUrl => {
+            const img = card.querySelector('.card-poster');
+            const imgContainer = card.querySelector('.card-image-container');
+            if (img) {
+                img.src = imageUrl;
+                img.onload = () => {
+                    imgContainer.classList.remove('shimmer');
+                    img.style.display = 'block';
+                };
+                img.onerror = () => {
+                    const fallbackUrl = currentMode === 'movies'
+                        ? 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=300&q=80'
+                        : 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?auto=format&fit=crop&w=300&q=80';
+                    img.src = fallbackUrl;
+                    imgContainer.classList.remove('shimmer');
+                    img.style.display = 'block';
+                };
+            }
+        });
         
         // Add event listener to Select button
         const selectBtn = card.querySelector('.select-match-btn');
@@ -365,10 +406,41 @@ function displayAmbiguousMatches(data) {
             searchInput.value = match.title;
             getRecommendations();
         });
-        
-        recommendationsGrid.appendChild(card);
     });
     
     showElement(resultsSection);
     resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// Fetch poster or book cover URL dynamically using free public APIs
+async function getPosterOrCoverUrl(title, type, isbn) {
+    if (type === 'books' && isbn && isbn.trim() !== "" && isbn !== 'nan') {
+        const cleanedIsbn = isbn.trim();
+        return `https://covers.openlibrary.org/b/isbn/${cleanedIsbn}-M.jpg`;
+    }
+    
+    // Fallback: Wikipedia Page Images API
+    try {
+        const queryTitle = type === 'movies' ? `${title} (film)` : title;
+        const response = await fetch(`https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&prop=pageimages&generator=search&gsrsearch=${encodeURIComponent(queryTitle)}&gsrlimit=1&piprop=thumbnail&pithumbsize=300`);
+        if (response.ok) {
+            const data = await response.json();
+            if (data.query && data.query.pages) {
+                const pages = data.query.pages;
+                const pageId = Object.keys(pages)[0];
+                if (pages[pageId].thumbnail && pages[pageId].thumbnail.source) {
+                    return pages[pageId].thumbnail.source;
+                }
+            }
+        }
+    } catch (e) {
+        console.error("Failed to fetch image from Wikipedia:", e);
+    }
+    
+    // Unsplash High-quality Placeholders if API limits or page images are missing
+    if (type === 'movies') {
+        return 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=300&q=80';
+    } else {
+        return 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?auto=format&fit=crop&w=300&q=80';
+    }
 }

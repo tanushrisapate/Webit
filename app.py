@@ -157,7 +157,8 @@ def recommend_book():
                     "title": str(row['Name']),
                     "authors": str(row['Authors']),
                     "publisher": str(row['Publisher']),
-                    "rating": float(row['Rating']) if 'Rating' in row and not pd.isna(row['Rating']) else 0.0
+                    "rating": float(row['Rating']) if 'Rating' in row and not pd.isna(row['Rating']) else 0.0,
+                    "isbn": str(row['ISBN']).strip() if 'ISBN' in row and not pd.isna(row['ISBN']) else ""
                 })
             return jsonify({
                 "ambiguous": True,
@@ -195,6 +196,7 @@ def recommend_book():
             "authors": str(row['Authors']),
             "publisher": str(row['Publisher']),
             "rating": float(row['Rating']) if 'Rating' in row and not pd.isna(row['Rating']) else 0.0,
+            "isbn": str(row['ISBN']).strip() if 'ISBN' in row and not pd.isna(row['ISBN']) else "",
             "similarity": float(i[1])
         })
         if len(recommendations) == 5:
