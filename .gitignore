@@ -7,7 +7,11 @@
 # Large datasets
 data/books/*.csv
 data/movies/*.csv
-data/processed/
+
+# Ignore processed data except for movie model pickles
+data/processed/*
+!data/processed/movie_list.pkl
+!data/processed/movie_similarity.pkl
 
 # Python
 __pycache__/
@@ -17,3 +21,5 @@ __pycache__/
 venv/
 env/
 .idea/
+.venv/
+.vscode/
