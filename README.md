@@ -1,6 +1,6 @@
-# Webit 2.0 — AI Movie Recommendation Engine
+# Webit —  Movie Recommendation Engine
 
-A web-based, content-based movie recommendation engine that suggests films using TF-IDF vectorization and Cosine Similarity. Built with a FastAPI backend, an SQLite database, JWT authentication, and a high-performance React + TypeScript + Tailwind CSS v4 frontend featuring real-time OTT streaming integrations.
+A web-based, content-based movie recommendation engine that suggests films using TF-IDF vectorization and Cosine Similarity. Built with a FastAPI backend and a high-performance React + TypeScript + Tailwind CSS v4 frontend featuring real-time OTT streaming integrations.
 
 ---
 
@@ -11,9 +11,6 @@ A web-based, content-based movie recommendation engine that suggests films using
 * **Exact Matching**: Enforces strict case-insensitive title matching. The searched movie itself is always displayed as the first card with a guaranteed **100% Match** badge.
 * **Ambiguity Resolver**: If multiple movies share similar names, an interactive picker prompts the user to select the correct one before fetching recommendations.
 
-### 🔒 User & Security System
-* **JWT Authentication**: Secure account system allowing registration and login with local SQLite storage.
-* **Watchlist**: Persist and manage your favorite movies to your personal profile.
 
 ### 🎨 Premium User Experience
 * **Minimal Monochrome Aesthetic**: Clean, responsive layout utilizing zinc colors, thin borders, and subtle animations.
@@ -27,8 +24,6 @@ A web-based, content-based movie recommendation engine that suggests films using
 
 ### Backend
 * **Python 3.13** (FastAPI backend with Uvicorn dev server)
-* **SQLAlchemy & SQLite** (User profile, registration, and watchlist persistence)
-* **JWT & Bcrypt** (Secure hashing and stateless session tokens)
 * **Pandas & NumPy** (Data wrangling and matrix operations)
 * **Scikit-learn** (CountVectorizer and Cosine Similarity computations)
 
@@ -102,9 +97,4 @@ Then open **[http://localhost:8000](http://localhost:8000)** in your browser.
 |--------|----------|-------------|
 | `GET` | `/api/movies` | Returns list of all movie titles for autocomplete |
 | `POST` | `/api/recommend/movie` | Get 5 similar movie recommendations |
-| `POST` | `/api/auth/register` | Register a new user account |
-| `POST` | `/api/auth/login` | Authenticate and receive JWT token |
-| `GET` | `/api/auth/me` | Get current user info |
-| `GET` | `/api/watchlist` | Get user's saved watchlist |
-| `POST` | `/api/watchlist/add` | Add a movie to watchlist |
-| `POST` | `/api/watchlist/remove` | Remove a movie from watchlist |
+
