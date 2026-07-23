@@ -11,14 +11,11 @@ interface RecommendationItem {
   title: string;
   rating: number;
   similarity: number;
-  authors?: string;
-  publisher?: string;
-  isbn?: string;
 }
 
 interface WatchlistItem {
   id: number;
-  item_type: 'movie' | 'book';
+  item_type: 'movie';
   item_id: number;
   title: string;
   added_at: string;
@@ -27,14 +24,10 @@ interface WatchlistItem {
 interface AmbiguousMatch {
   id: number;
   title: string;
-  authors?: string;
-  publisher?: string;
   rating: number;
-  isbn?: string;
 }
 
 function App() {
-  const [mode, setMode] = useState<'movie' | 'book'>('movie');
   const [activeTab, setActiveTab] = useState<'home' | 'watchlist'>('home');
   const [username, setUsername] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
@@ -44,8 +37,8 @@ function App() {
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
   const [recommendations, setRecommendations] = useState<RecommendationItem[]>([]);
+  const [searchKey, setSearchKey] = useState(0);
   
-  // Ambiguity resolver state
   const [ambiguousMatches, setAmbiguousMatches] = useState<AmbiguousMatch[]>([]);
   const [ambiguousQuery, setAmbiguousQuery] = useState('');
 
@@ -98,13 +91,13 @@ function App() {
     if (!token) return;
 
     const isSaved = watchlist.some(
-      (w) => w.item_type === mode && w.item_id === item.id
+      (w) => w.item_type === 'movie' && w.item_id === item.id
     );
 
     const endpoint = isSaved ? '/api/watchlist/remove' : '/api/watchlist/add';
     const body = isSaved 
-      ? { item_type: mode, item_id: item.id }
-      : { item_type: mode, item_id: item.id, title: item.title };
+      ? { item_type: 'movie', item_id: item.id }
+      : { item_type: 'movie', item_id: item.id, title: item.title };
 
     try {
       const response = await fetch(endpoint, {
@@ -124,7 +117,7 @@ function App() {
     }
   };
 
-  const handleRemoveFromWatchlist = async (type: 'movie' | 'book', id: number) => {
+  const handleRemoveFromWatchlist = async (id: number) => {
     if (!token) return;
     try {
       const response = await fetch('/api/watchlist/remove', {
@@ -133,7 +126,7 @@ function App() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ item_type: type, item_id: id }),
+        body: JSON.stringify({ item_type: 'movie', item_id: id }),
       });
 
       if (response.ok) {
@@ -151,13 +144,12 @@ function App() {
     setAmbiguousMatches([]);
     setQuery(searchQuery);
 
-    const url = mode === 'movie' ? '/api/recommend/movie' : '/api/recommend/book';
     const body = itemId !== undefined 
       ? { id: itemId } 
-      : (mode === 'movie' ? { movie: searchQuery } : { book: searchQuery });
+      : { movie: searchQuery };
 
     try {
-      const response = await fetch(url, {
+      const response = await fetch('/api/recommend/movie', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -187,22 +179,29 @@ function App() {
     executeSearch(match.title, match.id);
   };
 
-  const handleWatchlistSearch = (type: 'movie' | 'book', title: string) => {
-    setMode(type);
+  const handleWatchlistSearch = (title: string) => {
     setActiveTab('home');
     executeSearch(title);
+  };
+
+  const handleBrandClick = () => {
+    setActiveTab('home');
+    setRecommendations([]);
+    setAmbiguousMatches([]);
+    setError('');
+    setQuery('');
+    setSearchKey((k) => k + 1); // force-reset SearchBox input
   };
 
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar
-        mode={mode}
-        setMode={setMode}
         username={username}
         onLogout={handleLogout}
         onOpenAuth={() => setIsAuthOpen(true)}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
+        onBrandClick={handleBrandClick}
       />
 
       <main className="flex-grow max-w-7xl w-full mx-auto px-6 py-12">
@@ -211,15 +210,15 @@ function App() {
             {/* Header section */}
             <div className="text-center space-y-3 max-w-2xl mx-auto">
               <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-white">
-                Discover your next favorite {mode === 'movie' ? 'movie' : 'book'}
+                Discover your next favorite movie
               </h2>
               <p className="text-zinc-500 text-sm md:text-base">
-                Enter a title you love and our hybrid filtering engine will suggest 5 related matches.
+                Enter a title you love and our content-based filtering engine will suggest 5 related matches.
               </p>
             </div>
 
             {/* Search Input */}
-            <SearchBox mode={mode} onSearch={(q) => executeSearch(q)} />
+            <SearchBox key={searchKey} onSearch={(q) => executeSearch(q)} />
 
             {/* Loading Indicator */}
             {loading && (
@@ -245,7 +244,7 @@ function App() {
                   <div>
                     <h3 className="text-base font-bold text-zinc-250">Ambiguous Matches Found</h3>
                     <p className="text-xs text-zinc-400 mt-1">
-                      We found multiple {mode === 'movie' ? 'movies' : 'books'} containing "<strong>{ambiguousQuery}</strong>". Please select the correct one:
+                      We found multiple movies containing "<strong>{ambiguousQuery}</strong>". Please select the correct one:
                     </p>
                   </div>
                 </div>
@@ -258,12 +257,6 @@ function App() {
                       className="text-left bg-zinc-950 hover:bg-zinc-900 border border-zinc-900 hover:border-zinc-800 rounded-xl p-4 transition-all duration-200"
                     >
                       <h4 className="font-bold text-zinc-150 truncate">{match.title}</h4>
-                      {match.authors && (
-                        <p className="text-xs text-zinc-400 truncate mt-1">By {match.authors}</p>
-                      )}
-                      {match.publisher && (
-                        <p className="text-[10px] text-zinc-500 truncate">Publisher: {match.publisher}</p>
-                      )}
                       <div className="text-[10px] text-amber-500 mt-2 font-medium">
                         Rating: {match.rating.toFixed(1)} ★
                       </div>
@@ -287,13 +280,12 @@ function App() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-5">
                   {recommendations.map((item) => {
                     const isSaved = watchlist.some(
-                      (w) => w.item_type === mode && w.item_id === item.id
+                      (w) => w.item_type === 'movie' && w.item_id === item.id
                     );
                     return (
                       <RecommendationCard
                         key={item.id}
                         item={item}
-                        type={mode}
                         isSaved={isSaved}
                         isLoggedIn={!!token}
                         onToggleWatchlist={() => handleToggleWatchlist(item)}
@@ -312,7 +304,7 @@ function App() {
                 <Heart size={22} className="text-zinc-400" />
                 My Watchlist
               </h2>
-              <p className="text-zinc-500 text-xs mt-1">Keep track of your saved movies and books.</p>
+              <p className="text-zinc-500 text-xs mt-1">Keep track of your saved movies.</p>
             </div>
             <Watchlist
               items={watchlist}

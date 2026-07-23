@@ -1,28 +1,25 @@
-# Webit 2.0 (The Modern Rewrite)
+# Webit 2.0 — AI Movie Recommendation Engine
 
-A web-based, hybrid recommendation engine that suggests movies and books using Content-Based Filtering (Cosine Similarity) and Collaborative Filtering. Built with a FastAPI backend, an SQLite database, JWT authentication, and a high-performance React + TypeScript + Tailwind CSS v4 frontend featuring official OTT streaming logo integrations.
+A web-based, content-based movie recommendation engine that suggests films using TF-IDF vectorization and Cosine Similarity. Built with a FastAPI backend, an SQLite database, JWT authentication, and a high-performance React + TypeScript + Tailwind CSS v4 frontend featuring real-time OTT streaming integrations.
 
 ---
 
 ## Features
 
-### 🧠 Recommendation Engines
-* **Content-Based Filtering (Movies)**: Matches movie overviews, genres, keywords, cast, and crew using stem-tokenized TF-IDF/Count Vectorization and Cosine Similarity matrices.
-* **Hybrid Recommendation (Books)**: Combines book content metadata (authors, publishers, title tokens) with collaborative user ratings (via a custom pivot-table similarity calculation) for highly accurate suggestions.
-* **Series-Dampening & Diversity Filter**: Caps the number of recommended books written by the same author to prevent series-heavy suggestions, introducing wider discovery.
-* **Exact Matching**: Enforces strict case-insensitive title matching. The searched item itself is displayed as the first card with a guaranteed **100% Match** badge.
+### 🎬 Movie Recommendation Engine
+* **Content-Based Filtering**: Matches movies by overview, genres, keywords, top-cast members, and director using stem-tokenized CountVectorization and Cosine Similarity matrices built on the TMDB 5000 dataset.
+* **Exact Matching**: Enforces strict case-insensitive title matching. The searched movie itself is always displayed as the first card with a guaranteed **100% Match** badge.
+* **Ambiguity Resolver**: If multiple movies share similar names, an interactive picker prompts the user to select the correct one before fetching recommendations.
 
 ### 🔒 User & Security System
 * **JWT Authentication**: Secure account system allowing registration and login with local SQLite storage.
-* **Watchlist**: Persist and manage your favorite movies and books to your personal profile.
+* **Watchlist**: Persist and manage your favorite movies to your personal profile.
 
 ### 🎨 Premium User Experience
 * **Minimal Monochrome Aesthetic**: Clean, responsive layout utilizing zinc colors, thin borders, and subtle animations.
-* **Dynamic OTT Streaming Links**: Real-time fetching of streaming providers (Netflix, Prime Video, Disney+, Hotstar, Apple TV+, etc.) using JustWatch APIs, complete with official brand logos.
+* **Dynamic OTT Streaming Links**: Real-time fetching of streaming providers (Netflix, Prime Video, Disney+, Hotstar, Apple TV+, JioCinema, ZEE5, SonyLIV, etc.) using JustWatch APIs, complete with official brand logos.
 * **Interactive Hover Effects**: Cards lift up with deep shadows and scale posters on hover.
-* **Staggered Animations**: Cards load sequentially using custom CSS keyframes.
-* **Auto-completion**: Search suggestion dropdown matching titles in real-time.
-* **Ambiguity Resolver**: Prompts the user with an interactive match picker if multiple movies or books share similar names.
+* **Auto-completion**: Search suggestion dropdown matching movie titles in real-time.
 
 ---
 
@@ -49,24 +46,24 @@ webit/
 ├── backend/              # FastAPI application
 │   ├── auth.py           # JWT helper and password hashing
 │   ├── database.py       # SQLAlchemy engine and session helpers
-│   ├── models.py         # DB schemas (User, WatchlistItem, etc.)
+│   ├── models.py         # DB schemas (User, Movie, WatchlistItem)
 │   ├── main.py           # Router and recommendation endpoints
-│   ├── preprocess_db.py  # Data preprocessor and DB migrator
+│   ├── preprocess_db.py  # Movie data preprocessor and DB migrator
 │   └── test_api.py       # Mock API test runner
 ├── data/                 # Raw and processed datasets
-│   ├── movies/           # TMDB movie datasets
-│   ├── books/            # Book metadata and reviews
+│   ├── movies/           # TMDB 5000 movie datasets (CSV)
 │   ├── processed/        # Pickled similarity matrices
 │   └── webit.db          # SQLite Database file
 ├── frontend/             # Vite + React + TS Frontend
 │   ├── src/
-│   │   ├── components/   # Navbar, SearchBox, RecommendationCard, etc.
+│   │   ├── components/   # Navbar, SearchBox, RecommendationCard, Watchlist, AuthModal
 │   │   ├── App.tsx       # Main page state machine
 │   │   └── index.css     # Styling system and keyframes
 │   ├── index.html        # HTML shell
 │   ├── vite.config.ts    # Configured with Tailwind v4 and proxy rules
 │   └── package.json      # Frontend dependencies
 ├── main.py               # Main workspace entry point
+├── preprocess.py         # Standalone preprocessing script
 ├── requirements.txt      # Project requirements
 └── README.md             # Project documentation
 ```
@@ -82,7 +79,7 @@ python -m venv .venv
 .venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 
-# 2. Run preprocessing to build similarity models
+# 2. Run preprocessing to build movie similarity models
 python preprocess.py
 
 # 3. Build frontend assets
@@ -96,3 +93,18 @@ python main.py
 ```
 
 Then open **[http://localhost:8000](http://localhost:8000)** in your browser.
+
+---
+
+## API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/movies` | Returns list of all movie titles for autocomplete |
+| `POST` | `/api/recommend/movie` | Get 5 similar movie recommendations |
+| `POST` | `/api/auth/register` | Register a new user account |
+| `POST` | `/api/auth/login` | Authenticate and receive JWT token |
+| `GET` | `/api/auth/me` | Get current user info |
+| `GET` | `/api/watchlist` | Get user's saved watchlist |
+| `POST` | `/api/watchlist/add` | Add a movie to watchlist |
+| `POST` | `/api/watchlist/remove` | Remove a movie from watchlist |

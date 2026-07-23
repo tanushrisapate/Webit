@@ -2,11 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Search } from 'lucide-react';
 
 interface SearchBoxProps {
-  mode: 'movie' | 'book';
   onSearch: (query: string) => void;
 }
 
-export const SearchBox: React.FC<SearchBoxProps> = ({ mode, onSearch }) => {
+export const SearchBox: React.FC<SearchBoxProps> = ({ onSearch }) => {
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [filtered, setFiltered] = useState<string[]>([]);
@@ -15,13 +14,12 @@ export const SearchBox: React.FC<SearchBoxProps> = ({ mode, onSearch }) => {
   const [loading, setLoading] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Fetch all titles for autocompletion cache
+  // Fetch all movie titles for autocompletion cache
   useEffect(() => {
     const fetchSuggestions = async () => {
       setLoading(true);
       try {
-        const endpoint = mode === 'movie' ? '/api/movies' : '/api/books';
-        const response = await fetch(endpoint);
+        const response = await fetch('/api/movies');
         if (response.ok) {
           const list = await response.json();
           setSuggestions(list);
@@ -37,7 +35,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({ mode, onSearch }) => {
     setQuery('');
     setShowDropdown(false);
     setSelectedIndex(-1);
-  }, [mode]);
+  }, []);
 
   // Filter suggestions as user types
   useEffect(() => {
@@ -74,11 +72,12 @@ export const SearchBox: React.FC<SearchBoxProps> = ({ mode, onSearch }) => {
       e.preventDefault();
       if (selectedIndex >= 0 && selectedIndex < filtered.length) {
         const selectedValue = filtered[selectedIndex];
-        setQuery(selectedValue);
         onSearch(selectedValue);
+        setQuery('');
         setShowDropdown(false);
       } else if (query.trim()) {
         onSearch(query);
+        setQuery('');
         setShowDropdown(false);
       }
     } else if (e.key === 'Escape') {
@@ -102,7 +101,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({ mode, onSearch }) => {
             setSelectedIndex(-1);
           }}
           onKeyDown={handleKeyDown}
-          placeholder={loading ? "Caching list..." : `Enter a ${mode === 'movie' ? 'movie' : 'book'} title...`}
+          placeholder={loading ? "Caching movie list..." : "Enter a movie title..."}
           disabled={loading}
           className="w-full bg-transparent border-0 outline-none focus:ring-0 py-3.5 px-3 text-zinc-100 placeholder-zinc-650 text-lg"
         />
@@ -110,6 +109,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({ mode, onSearch }) => {
           onClick={() => {
             if (query.trim()) {
               onSearch(query);
+              setQuery('');
               setShowDropdown(false);
             }
           }}
@@ -121,13 +121,13 @@ export const SearchBox: React.FC<SearchBoxProps> = ({ mode, onSearch }) => {
 
       {/* Autocomplete Dropdown */}
       {showDropdown && filtered.length > 0 && (
-        <div className="absolute top-full left-0 right-0 z-40 mt-2 bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden shadow-2xl max-h-80 overflow-y-auto">
+        <div className="absolute top-full left-0 right-0 z-50 mt-2 bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden shadow-2xl max-h-80 overflow-y-auto">
           {filtered.map((item, idx) => (
             <button
               key={idx}
               onClick={() => {
-                setQuery(item);
                 onSearch(item);
+                setQuery('');
                 setShowDropdown(false);
               }}
               onMouseEnter={() => setSelectedIndex(idx)}

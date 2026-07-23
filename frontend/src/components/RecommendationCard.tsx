@@ -1,19 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Bookmark, BookmarkCheck, Star, BookOpen, ExternalLink, Loader2, Play } from 'lucide-react';
+import { Bookmark, BookmarkCheck, Star, ExternalLink, Loader2, Play } from 'lucide-react';
 
 interface RecommendationItem {
   id: number;
   title: string;
   rating: number;
   similarity: number;
-  authors?: string;
-  publisher?: string;
-  isbn?: string;
 }
 
 interface RecommendationCardProps {
   item: RecommendationItem;
-  type: 'movie' | 'book';
   isSaved: boolean;
   isLoggedIn: boolean;
   onToggleWatchlist: () => void;
@@ -150,7 +146,6 @@ const getMatchColor = (pct: number) => {
 
 export const RecommendationCard: React.FC<RecommendationCardProps> = ({
   item,
-  type,
   isSaved,
   isLoggedIn,
   onToggleWatchlist,
@@ -158,30 +153,20 @@ export const RecommendationCard: React.FC<RecommendationCardProps> = ({
   const [imageUrl, setImageUrl] = useState<string>('');
   const [loadingImage, setLoadingImage] = useState<boolean>(true);
   const [providers, setProviders] = useState<ProviderInfo[]>([]);
-  const [loadingProviders, setLoadingProviders] = useState<boolean>(type === 'movie');
+  const [loadingProviders, setLoadingProviders] = useState<boolean>(true);
   const [isHovered, setIsHovered] = useState(false);
   const matchPercentage = Math.round(item.similarity * 100);
   const matchColor = getMatchColor(matchPercentage);
 
-  // 1. Fetch poster/cover
+  // 1. Fetch movie poster via Wikipedia API
   useEffect(() => {
     let active = true;
     const fetchImage = async () => {
       setLoadingImage(true);
 
-      // Try OpenLibrary for books first
-      if (type === 'book' && item.isbn && item.isbn.trim() !== '' && item.isbn !== 'nan') {
-        const cleanedIsbn = item.isbn.trim();
-        if (active) {
-          setImageUrl(`https://covers.openlibrary.org/b/isbn/${cleanedIsbn}-M.jpg`);
-          setLoadingImage(false);
-        }
-        return;
-      }
-
-      // Wikipedia API Fallback
+      // Wikipedia API for movie poster
       try {
-        const queryTitle = type === 'movie' ? `${item.title} (film)` : item.title;
+        const queryTitle = `${item.title} (film)`;
         const response = await fetch(
           `https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&prop=pageimages&pilicense=any&generator=search&gsrsearch=${encodeURIComponent(
             queryTitle
@@ -205,12 +190,10 @@ export const RecommendationCard: React.FC<RecommendationCardProps> = ({
         console.error('Wikipedia image lookup failed:', e);
       }
 
-      // Final Unsplash fallback
+      // Unsplash fallback for movies
       if (active) {
         setImageUrl(
-          type === 'movie'
-            ? 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=300&q=80'
-            : 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?auto=format&fit=crop&w=300&q=80'
+          'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=300&q=80'
         );
         setLoadingImage(false);
       }
@@ -218,11 +201,10 @@ export const RecommendationCard: React.FC<RecommendationCardProps> = ({
 
     fetchImage();
     return () => { active = false; };
-  }, [item.title, type, item.isbn]);
+  }, [item.title]);
 
-  // 2. Fetch ALL streaming providers for movies
+  // 2. Fetch ALL streaming providers for movie
   useEffect(() => {
-    if (type !== 'movie') return;
     let active = true;
 
     const fetchProviders = async () => {
@@ -282,7 +264,7 @@ export const RecommendationCard: React.FC<RecommendationCardProps> = ({
 
     fetchProviders();
     return () => { active = false; };
-  }, [item.title, type]);
+  }, [item.title]);
 
   return (
     <div
@@ -308,7 +290,7 @@ export const RecommendationCard: React.FC<RecommendationCardProps> = ({
       }}
     >
       <div>
-        {/* Cover / Poster image */}
+        {/* Movie Poster */}
         <div style={{
           position: 'relative',
           aspectRatio: '2/3',
@@ -345,9 +327,7 @@ export const RecommendationCard: React.FC<RecommendationCardProps> = ({
               }}
               onError={(e) => {
                 (e.target as HTMLImageElement).src =
-                  type === 'movie'
-                    ? 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=300&q=80'
-                    : 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?auto=format&fit=crop&w=300&q=80';
+                  'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=300&q=80';
               }}
             />
           )}
@@ -421,182 +401,94 @@ export const RecommendationCard: React.FC<RecommendationCardProps> = ({
           </div>
           <span style={{ fontSize: '10px', color: '#52525b' }}>•</span>
           <span style={{ fontSize: '10px', color: '#71717a', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.5px' }}>
-            {type === 'movie' ? 'Movie' : 'Book'}
+            Movie
           </span>
         </div>
-
-        {/* Book metadata */}
-        {type === 'book' && item.authors && (
-          <div style={{
-            marginTop: '10px',
-            paddingTop: '10px',
-            borderTop: '1px solid rgba(63, 63, 70, 0.4)',
-            fontSize: '11px',
-            color: '#a1a1aa',
-          }}>
-            <p style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-              <strong style={{ color: '#d4d4d8' }}>By:</strong> {item.authors}
-            </p>
-            {item.publisher && (
-              <p style={{ fontSize: '10px', color: '#71717a', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {item.publisher}
-              </p>
-            )}
-          </div>
-        )}
       </div>
 
-      {/* Action Footer: OTT Links / Goodreads */}
+      {/* Action Footer: OTT Streaming Links */}
       <div style={{
         marginTop: '14px',
         paddingTop: '12px',
         borderTop: '1px solid rgba(63, 63, 70, 0.4)',
       }}>
-        {type === 'movie' ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minHeight: '30px' }}>
-            {loadingProviders ? (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '6px 0' }}>
-                <Loader2 size={12} style={{ animation: 'spin 1s linear infinite', color: '#52525b' }} />
-                <span style={{ fontSize: '10px', color: '#52525b' }}>Finding streams...</span>
-              </div>
-            ) : providers.length > 0 ? (
-              providers.map((p, idx) => {
-                const brand = getProviderBrand(p.name);
-                return (
-                  <a
-                    key={idx}
-                    href={p.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '9px 12px',
-                      borderRadius: '10px',
-                      border: `1px solid ${brand.border}`,
-                      background: brand.bg,
-                      fontSize: '11px',
-                      fontWeight: 600,
-                      color: brand.text,
-                      textDecoration: 'none',
-                      transition: 'all 0.2s',
-                      cursor: 'pointer',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = brand.hoverBg;
-                      e.currentTarget.style.borderColor = brand.hoverBorder;
-                      e.currentTarget.style.transform = 'translateX(2px)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = brand.bg;
-                      e.currentTarget.style.borderColor = brand.border;
-                      e.currentTarget.style.transform = 'translateX(0)';
-                    }}
-                  >
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
-                      <span style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-                        {brand.logoUrl ? (
-                          <img 
-                            src={brand.logoUrl} 
-                            alt={p.name} 
-                            style={{ 
-                              height: '14px', 
-                              maxWidth: '75px',
-                              objectFit: 'contain', 
-                              display: 'block'
-                            }} 
-                          />
-                        ) : (
-                          <Play size={10} style={{ fill: 'currentColor' }} />
-                        )}
-                      </span>
-                      <span style={{
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        fontSize: '10px',
-                      }}>
-                        {p.isFlatrate ? 'Stream' : 'Watch'} on {p.name}
-                      </span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minHeight: '30px' }}>
+          {loadingProviders ? (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '6px 0' }}>
+              <Loader2 size={12} style={{ animation: 'spin 1s linear infinite', color: '#52525b' }} />
+              <span style={{ fontSize: '10px', color: '#52525b' }}>Finding streams...</span>
+            </div>
+          ) : providers.length > 0 ? (
+            providers.map((p, idx) => {
+              const brand = getProviderBrand(p.name);
+              return (
+                <a
+                  key={idx}
+                  href={p.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '9px 12px',
+                    borderRadius: '10px',
+                    border: `1px solid ${brand.border}`,
+                    background: brand.bg,
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    color: brand.text,
+                    textDecoration: 'none',
+                    transition: 'all 0.2s',
+                    cursor: 'pointer',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = brand.hoverBg;
+                    e.currentTarget.style.borderColor = brand.hoverBorder;
+                    e.currentTarget.style.transform = 'translateX(2px)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = brand.bg;
+                    e.currentTarget.style.borderColor = brand.border;
+                    e.currentTarget.style.transform = 'translateX(0)';
+                  }}
+                >
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                      {brand.logoUrl ? (
+                        <img 
+                          src={brand.logoUrl} 
+                          alt={p.name} 
+                          style={{ 
+                            height: '14px', 
+                            maxWidth: '75px',
+                            objectFit: 'contain', 
+                            display: 'block'
+                          }} 
+                        />
+                      ) : (
+                        <Play size={10} style={{ fill: 'currentColor' }} />
+                      )}
                     </span>
-                    <ExternalLink size={10} style={{ opacity: 0.5, flexShrink: 0, marginLeft: '4px' }} />
-                  </a>
-                );
-              })
-            ) : (
-              <span style={{ fontSize: '10px', color: '#52525b', fontStyle: 'italic', textAlign: 'center', display: 'block', padding: '4px 0' }}>
-                No streaming links found
-              </span>
-            )}
-          </div>
-        ) : (
-          /* Books: Goodreads + Amazon */
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <a
-              href={`https://www.goodreads.com/search?q=${encodeURIComponent(item.title)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px',
-                fontSize: '11px',
-                color: '#a1a1aa',
-                background: 'rgba(9, 9, 11, 0.6)',
-                border: '1px solid rgba(63, 63, 70, 0.4)',
-                borderRadius: '10px',
-                padding: '9px 0',
-                textDecoration: 'none',
-                transition: 'all 0.2s',
-                cursor: 'pointer',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = '#ffffff';
-                e.currentTarget.style.borderColor = 'rgba(113, 113, 122, 0.4)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = '#a1a1aa';
-                e.currentTarget.style.borderColor = 'rgba(63, 63, 70, 0.4)';
-              }}
-            >
-              <BookOpen size={11} />
-              <span>View on Goodreads</span>
-            </a>
-            <a
-              href={`https://www.amazon.in/s?k=${encodeURIComponent(item.title + ' book')}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px',
-                fontSize: '11px',
-                color: '#f59e0b',
-                background: 'rgba(245, 158, 11, 0.06)',
-                border: '1px solid rgba(245, 158, 11, 0.15)',
-                borderRadius: '10px',
-                padding: '9px 0',
-                textDecoration: 'none',
-                transition: 'all 0.2s',
-                cursor: 'pointer',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(245, 158, 11, 0.12)';
-                e.currentTarget.style.borderColor = 'rgba(245, 158, 11, 0.3)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'rgba(245, 158, 11, 0.06)';
-                e.currentTarget.style.borderColor = 'rgba(245, 158, 11, 0.15)';
-              }}
-            >
-              <span style={{ fontWeight: 700 }}>amazon</span>
-              <span>Buy on Amazon</span>
-            </a>
-          </div>
-        )}
+                    <span style={{
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      fontSize: '10px',
+                    }}>
+                      {p.isFlatrate ? 'Stream' : 'Watch'} on {p.name}
+                    </span>
+                  </span>
+                  <ExternalLink size={10} style={{ opacity: 0.5, flexShrink: 0, marginLeft: '4px' }} />
+                </a>
+              );
+            })
+          ) : (
+            <span style={{ fontSize: '10px', color: '#52525b', fontStyle: 'italic', textAlign: 'center', display: 'block', padding: '4px 0' }}>
+              No streaming links found
+            </span>
+          )}
+        </div>
       </div>
     </div>
   );

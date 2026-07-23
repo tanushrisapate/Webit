@@ -1,44 +1,44 @@
 import React from 'react';
-import { Film, BookOpen, LogIn, LogOut, Bookmark, Home } from 'lucide-react';
+import { Film, LogIn, LogOut, Bookmark, Home } from 'lucide-react';
 
 interface NavbarProps {
-  mode: 'movie' | 'book';
-  setMode: (mode: 'movie' | 'book') => void;
   username: string | null;
   onLogout: () => void;
   onOpenAuth: () => void;
+  onBrandClick: () => void;
   activeTab: 'home' | 'watchlist';
   setActiveTab: (tab: 'home' | 'watchlist') => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
-  mode,
-  setMode,
   username,
   onLogout,
   onOpenAuth,
+  onBrandClick,
   activeTab,
   setActiveTab,
 }) => {
   return (
     <nav className="sticky top-0 z-30 w-full bg-zinc-950/80 border-b border-zinc-900/80 backdrop-blur-md px-6 py-4">
       <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
-        {/* Brand Logo */}
-        <div className="flex items-center gap-3">
-          <div className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl text-zinc-100 font-bold text-xl">
-            W
+        {/* Brand Logo — clicking clears search and goes home */}
+        <button
+          onClick={onBrandClick}
+          className="flex items-center gap-3 hover:opacity-80 transition-opacity duration-200"
+        >
+          <div className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl text-zinc-100">
+            <Film size={20} />
           </div>
-          <div>
-            <h1 className="font-bold text-lg tracking-tight text-zinc-100 flex items-center gap-1.5">
-              Webit <span className="text-[10px] bg-zinc-900 border border-zinc-800/80 text-zinc-400 font-medium px-2 py-0.5 rounded-full">v2.0</span>
+          <div className="text-left">
+            <h1 className="font-bold text-lg tracking-tight text-zinc-100">
+              Webit
             </h1>
-            <p className="text-[10px] text-zinc-500">Hybrid AI Recommendation Engine</p>
+            <p className="text-[10px] text-zinc-500">Movie Recommendation Engine</p>
           </div>
-        </div>
+        </button>
 
-        {/* Tab & Mode Switchers */}
+        {/* Tab Navigation */}
         <div className="flex items-center gap-4">
-          {/* Main Navigation */}
           <div className="flex bg-zinc-900/50 p-1 rounded-xl border border-zinc-800/80 text-sm">
             <button
               onClick={() => setActiveTab('home')}
@@ -65,34 +65,6 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
             )}
           </div>
-
-          {/* Mode Toggler (only on Home tab) */}
-          {activeTab === 'home' && (
-            <div className="flex bg-zinc-900/50 p-1 rounded-xl border border-zinc-800/80 text-sm">
-              <button
-                onClick={() => setMode('movie')}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg transition font-medium ${
-                  mode === 'movie'
-                    ? 'bg-zinc-100 text-zinc-950 font-semibold shadow-sm'
-                    : 'text-zinc-500 hover:text-zinc-200'
-                }`}
-              >
-                <Film size={15} />
-                Movies
-              </button>
-              <button
-                onClick={() => setMode('book')}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg transition font-medium ${
-                  mode === 'book'
-                    ? 'bg-zinc-100 text-zinc-950 font-semibold shadow-sm'
-                    : 'text-zinc-500 hover:text-zinc-200'
-                }`}
-              >
-                <BookOpen size={15} />
-                Books
-              </button>
-            </div>
-          )}
         </div>
 
         {/* User Profile / Auth Action */}

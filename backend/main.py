@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from backend.database import engine, Base, get_db
-from backend.models import User, Movie, Book, WatchlistItem
+from backend.models import User, Movie, WatchlistItem
 from backend.auth import (
     get_password_hash,
     verify_password,
@@ -35,11 +35,9 @@ app.add_middleware(
 # Global variables for similarity models
 movies_df = None
 movies_similarity = None
-books_df = None
-books_similarity = None
 
 def load_similarity_models():
-    global movies_df, movies_similarity, books_df, books_similarity
+    global movies_df, movies_similarity
     try:
         print("Loading movie models...")
         with open('data/processed/movie_list.pkl', 'rb') as f:
@@ -49,16 +47,6 @@ def load_similarity_models():
         print("Movie models loaded.")
     except Exception as e:
         print(f"Error loading movie models: {e}")
-
-    try:
-        print("Loading book models...")
-        with open('data/processed/book_list.pkl', 'rb') as f:
-            books_df = pickle.load(f)
-        with open('data/processed/book_similarity.pkl', 'rb') as f:
-            books_similarity = pickle.load(f)
-        print("Book models loaded.")
-    except Exception as e:
-        print(f"Error loading book models: {e}")
 
 @app.on_event("startup")
 def startup_event():
@@ -75,11 +63,10 @@ class Token(BaseModel):
 
 class RecommendRequest(BaseModel):
     movie: Optional[str] = None
-    book: Optional[str] = None
     id: Optional[int] = None
 
 class WatchlistAddRequest(BaseModel):
-    item_type: str  # 'movie' or 'book'
+    item_type: str  # 'movie'
     item_id: int
     title: str
 
@@ -126,12 +113,6 @@ def get_movies(db: Session = Depends(get_db)):
     if movies_df is None:
         raise HTTPException(status_code=503, detail="Movie models not loaded.")
     return movies_df['title'].tolist()
-
-@app.get("/api/books")
-def get_books(db: Session = Depends(get_db)):
-    if books_df is None:
-        raise HTTPException(status_code=503, detail="Book models not loaded.")
-    return books_df['Name'].tolist()
 
 # Recommendation Endpoints
 @app.post("/api/recommend/movie")
@@ -208,101 +189,6 @@ def recommend_movie(req: RecommendRequest, db: Session = Depends(get_db)):
             
     return {
         "query": movie_name,
-        "recommendations": recommendations
-    }
-
-@app.post("/api/recommend/book")
-def recommend_book(req: RecommendRequest, db: Session = Depends(get_db)):
-    if books_df is None or books_similarity is None:
-        raise HTTPException(status_code=503, detail="Book models not loaded.")
-    
-    book_id = req.id
-    book_title = (req.book or "").strip()
-    
-    if book_id is not None:
-        matching_books = books_df[books_df['Id'] == int(book_id)]
-    else:
-        matching_books = books_df[books_df['Name'].str.lower() == book_title.lower()]
-        if matching_books.empty:
-            matching_books = books_df[books_df['Name'].str.contains(book_title, case=False, na=False)]
-        if matching_books.empty:
-            raise HTTPException(status_code=404, detail=f"Book '{book_title}' not found.")
-        
-        if len(matching_books) > 1:
-            exact_subset = matching_books[matching_books['Name'].str.lower() == book_title.lower()]
-            if len(exact_subset) == 1:
-                matching_books = exact_subset
-            else:
-                matches = []
-                for idx, row in matching_books.iterrows():
-                    matches.append({
-                        "id": int(row['Id']),
-                        "title": str(row['Name']),
-                        "authors": str(row['Authors']),
-                        "publisher": str(row['Publisher']),
-                        "rating": float(row['Rating']) if 'Rating' in row and not pd.isna(row['Rating']) else 0.0,
-                        "isbn": str(row['ISBN']).strip() if 'ISBN' in row and not pd.isna(row['ISBN']) else ""
-                    })
-                return {
-                    "ambiguous": True,
-                    "query": book_title,
-                    "matches": matches
-                }
-                
-    book_idx = matching_books.index[0]
-    book_row = matching_books.iloc[0]
-    book_name = book_row['Name']
-    
-    distances = books_similarity[book_idx]
-    books_list = sorted(list(enumerate(distances)), reverse=True, key=lambda x: x[1])
-    
-    # First: include the queried book itself with 100% match
-    queried_item = {
-        "id": int(book_row['Id']),
-        "title": str(book_row['Name']),
-        "authors": str(book_row['Authors']),
-        "publisher": str(book_row['Publisher']),
-        "rating": float(book_row['Rating']) if 'Rating' in book_row and not pd.isna(book_row['Rating']) else 0.0,
-        "isbn": str(book_row['ISBN']).strip() if 'ISBN' in book_row and not pd.isna(book_row['ISBN']) else "",
-        "similarity": 1.0
-    }
-    
-    recommendations = [queried_item]
-    seen_ids = {int(book_row['Id'])}
-    author_counts = {}
-    max_author_limit = 2
-    
-    for i in books_list:
-        if i[0] == book_idx:
-            continue
-        row = books_df.iloc[i[0]]
-        row_id = int(row['Id'])
-        if row_id in seen_ids:
-            continue
-        seen_ids.add(row_id)
-        
-        author_raw = str(row['Authors']).strip().split(',')[0].strip().lower()
-        if author_raw:
-            if author_counts.get(author_raw, 0) >= max_author_limit:
-                continue
-            author_counts[author_raw] = author_counts.get(author_raw, 0) + 1
-            
-        similarity = float(i[1])
-            
-        recommendations.append({
-            "id": row_id,
-            "title": str(row['Name']),
-            "authors": str(row['Authors']),
-            "publisher": str(row['Publisher']),
-            "rating": float(row['Rating']) if 'Rating' in row and not pd.isna(row['Rating']) else 0.0,
-            "isbn": str(row['ISBN']).strip() if 'ISBN' in row and not pd.isna(row['ISBN']) else "",
-            "similarity": similarity
-        })
-        if len(recommendations) == 6:  # 1 exact + 5 similar
-            break
-            
-    return {
-        "query": book_name,
         "recommendations": recommendations
     }
 
